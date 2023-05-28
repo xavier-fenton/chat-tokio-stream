@@ -5,7 +5,7 @@ use tokio::{net::TcpListener, io::{ AsyncBufReadExt, AsyncWriteExt, BufReader}};
 // use telnet localhost 8080 cmd to connect to server
 
 
-// at this point read_line is appending each message to each other 
+// at this point we aren't handling multiple clients independently,we are handling just one
 async fn main() {
   let listener = TcpListener::bind("localhost:8080").await.unwrap();
 
@@ -23,6 +23,7 @@ async fn main() {
     }
 
     writer.write_all(line.as_bytes()).await.unwrap();
+    line.clear(); // its our job here to do the work for clearing the line, rather than depending on read_line
   }
 
 } 
