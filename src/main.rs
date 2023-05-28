@@ -1,29 +1,51 @@
-use tokio::{net::TcpListener, io::{ AsyncBufReadExt, AsyncWriteExt, BufReader}};
+use tokio::{net::TcpListener, io::{ AsyncBufReadExt, AsyncWriteExt, BufReader}, sync::broadcast};
 
 #[tokio::main]
 
-// use telnet localhost 8080 cmd to connect to server
+// use telnet localhost 8080 cmd to connect to server in a split terminal
 
+// what is a 'turbofish' ? A way to give the rust compiler a specific value. Can search turbofish if I forget
 
-// at this point we aren't handling multiple clients independently,we are handling just one
+// at this point we aren't handling multiple clients independently. we are handling just one
 async fn main() {
   let listener = TcpListener::bind("localhost:8080").await.unwrap();
 
-  let (mut socket, _addr ) = listener.accept().await.unwrap();
+  let (tx, _rx) = broadcast::channel(10);
 
-  let (reader, mut writer) = socket.split();
+  loop{
+      let (mut socket, addr ) = listener.accept().await.unwrap();
 
-  let mut reader = BufReader::new(reader);
-  let mut line = String::new();
-  
-  loop {
-    let bytes_read = reader.read_line(&mut line).await.unwrap();
-    if bytes_read == 0 {
-      break;
-    }
+      let tx = tx.clone();
+      let mut rx = tx.subscribe();
 
-    writer.write_all(line.as_bytes()).await.unwrap();
-    line.clear(); // its our job here to do the work for clearing the line, rather than depending on read_line
+      // tokio spawn is running concurrently and it is its own future and async block
+      tokio::spawn(async move{
+        let (reader, mut writer) = socket.split();
+
+        let mut reader = BufReader::new(reader);
+        let mut line = String::new();
+        
+        loop {
+          tokio::select! {
+            result = reader.read_line(&mut line) => {
+              if result.unwrap() == 0 {
+                break;
+              }
+
+
+              tx.send((line.clone(), addr)).unwrap();
+              line.clear();
+            }
+            result = rx.recv() => {
+
+              let (msg, other_addr) = result.unwrap();
+
+              if addr != other_addr {
+              writer.write_all(msg.as_bytes()).await.unwrap();
+            }
+            }
+          }
+        }});
+
   }
-
 } 
