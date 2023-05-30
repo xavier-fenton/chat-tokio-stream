@@ -4,7 +4,7 @@ use tokio::{net::TcpListener, io::{ AsyncBufReadExt, AsyncWriteExt, BufReader}, 
 
 // use telnet localhost 8080 cmd to connect to server in a split terminal
 
-// what is a 'turbofish' ? A way to give the rust compiler a specific value. Can search turbofish if I forget
+// what is a 'turbofish' ? A way to give the rust compiler a specific value. Can search turbofish if I forget. Default::default() from the rust std
 
 // at this point we aren't handling multiple clients independently. we are handling just one
 async fn main() {
